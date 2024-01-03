@@ -14,7 +14,7 @@ interface IProps {
  * Perspective library adds load to HTMLElement prototype.
  * This interface acts as a wrapper for Typescript compiler.
  */
-interface PerspectiveViewerElement {
+interface PerspectiveViewerElement extends HTMLElement {
   load: (table: Table) => void,
 }
 
@@ -32,7 +32,7 @@ class Graph extends Component<IProps, {}> {
 
   componentDidMount() {
     // Get element to attach the table from the DOM.
-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
 
     const schema = {
       stock: 'string',
@@ -47,8 +47,33 @@ class Graph extends Component<IProps, {}> {
     if (this.table) {
       // Load the `table` in the `<perspective-viewer>` DOM reference.
 
-      // Add more Perspective configurations here.
+      // Adding more attributes of the element
       elem.load(this.table);
+      // since we want a continuous line graph we’re using a y_line.
+      elem.setAttribute('view', 'y_line');
+      // ‘column-pivots’ is what will allow us to distinguish stock ABC from DEF. We
+      // use ‘[“stock”]’ as its value here.
+      elem.setAttribute('column-pivots', '["stock"]');
+      // ‘row-pivots’ takes care of our x-axis. This allows us to map each
+      // datapoint based on its timestamp. Without this, the x-axis would be blank.
+      elem.setAttribute('row-pivots', '["timestamp"]');
+      // ‘columns’ allows us to focus on a particular part of a stock’s data along the
+      // y-axis. Without this, the graph would plot different data points of a stock,
+      // i.e. :top_ask_price, top_bid_price, stock, timestamp. For this instance
+      // we only care about top_ask_price
+      elem.setAttribute('columns', '["top_ask_price"]');
+      // ‘aggregates’ allows us to handle the duplicated data we observed earlier and
+      // consolidate it into a single data point. In our case we only want to consider
+      // a data point unique if it has a unique stock name and timestamp. If there are
+      // duplicates like what we had before, we want to average out the top_bid_prices
+      // and the top_ask_prices of these ‘similar’ data points before treating them as
+      // one.
+      elem.setAttribute('aggregates', `{
+        "stock": "distinct count",
+        "top_ask_price": "avg",
+        "top_bid_price": "avg",
+        "timestamp": "distinct count"
+      }`);
     }
   }
 
